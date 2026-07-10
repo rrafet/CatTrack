@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ckgeknxtjdwjsqqbmybg.supabase.co; connect-src 'self' https://ckgeknxtjdwjsqqbmybg.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob: https://ckgeknxtjdwjsqqbmybg.supabase.co https://cdn.jsdelivr.net https://tile.openstreetmap.org; connect-src 'self' https://ckgeknxtjdwjsqqbmybg.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none'">
   <title>CatTrack</title>
   <meta name="description" content="A shared log of the cats around Sabancı University campus.">
   <meta name="theme-color" content="#FAF8F4">
@@ -18,7 +18,10 @@
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="tw-config.js?v=5"></script>
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H"
+        crossorigin="anonymous">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body class="bg-paper text-ink font-sans antialiased min-h-screen leading-relaxed">
 
@@ -167,6 +170,18 @@
           <select id="f-building" class="field" required></select>
         </label>
 
+        <div class="block">
+          <span class="field-label">Usual spot on map <em class="opt">optional</em></span>
+          <button type="button" id="f-map-toggle" class="btn-secondary w-full">Show map</button>
+          <div id="f-map-wrap" class="hidden mt-2">
+            <div id="f-map" class="pin-map"></div>
+            <div class="flex justify-between items-center mt-1.5">
+              <span class="text-xs text-ink-3">Tap the map to drop a pin.</span>
+              <button type="button" id="f-map-clear" class="text-xs text-ink-3 hover:text-ink underline underline-offset-2">Clear pin</button>
+            </div>
+          </div>
+        </div>
+
         <label class="block">
           <span class="field-label">Breed <em class="opt">optional</em></span>
           <input id="f-breed" type="text" class="field" placeholder="e.g. Tabby, Van, unknown" maxlength="60">
@@ -273,6 +288,7 @@
 
       <div class="mt-6 pt-4 border-t border-line">
         <h3 class="section-title mb-2">Sighting history</h3>
+        <div id="m-map" class="pin-map hidden mb-3"></div>
         <div id="m-sightings" class="space-y-1 text-sm text-ink-2"></div>
       </div>
 
@@ -293,6 +309,14 @@
     <h3 id="seen-title" class="font-semibold tracking-tight mb-1">Where did you see this cat?</h3>
     <p class="text-sm text-ink-3 mb-3">Logged as a sighting — the cat's usual location stays the same.</p>
     <select id="seen-place" class="field mb-3"></select>
+    <button type="button" id="seen-map-toggle" class="btn-secondary w-full mb-3">Pin exact spot on map <em class="opt not-italic font-normal text-ink-3">optional</em></button>
+    <div id="seen-map-wrap" class="hidden mb-3">
+      <div id="seen-map" class="pin-map"></div>
+      <div class="flex justify-between items-center mt-1.5">
+        <span class="text-xs text-ink-3">Tap the map to drop a pin.</span>
+        <button type="button" id="seen-map-clear" class="text-xs text-ink-3 hover:text-ink underline underline-offset-2">Clear pin</button>
+      </div>
+    </div>
     <div class="flex gap-2">
       <button id="seen-confirm" class="btn-primary flex-1">Seen here, now</button>
       <button class="btn-secondary" data-seen-cancel>Cancel</button>
@@ -305,6 +329,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1/dist/umd/supabase.min.js"
           integrity="sha384-fx4y4cDx8NYfissnVzdGJY3yVXWY3rn5ab5HTUjpvgT35oDiyAbjjqnLhnRmESNE"
           crossorigin="anonymous"></script>
-  <script src="app.js?v=10"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
+          crossorigin="anonymous"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

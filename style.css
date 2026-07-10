@@ -513,10 +513,37 @@ textarea.field {
   transform: translate(-50%, -50%);
   z-index: 49;
   width: min(calc(100vw - 2rem), 22rem);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
   background: var(--paper);
   border: 1px solid var(--line-2);
   border-radius: 6px;
   padding: 1.25rem 1rem;
+}
+
+/* ---------- Maps (Leaflet + OSM) ---------- */
+
+.pin-map {
+  height: 15rem;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  /* Contain Leaflet's internal z-indexes so panes/controls can't
+     escape above the app's overlays and toast. */
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+}
+
+/* divIcon markers — plain themed dots, no image assets */
+.map-pin {
+  background: var(--accent);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(43, 41, 38, 0.3);
+}
+
+.map-pin-sighting {
+  background: var(--sage);
 }
 
 /* ---------- Toast ---------- */

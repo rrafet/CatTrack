@@ -397,6 +397,104 @@ async function toggleTrack(cat) {
   }
 }
 
+// ---------- Map (Leaflet + OSM) ----------
+
+const CAMPUS_CENTER = [40.8927, 29.3786];
+// Campus OSM bbox with a little breathing room.
+const CAMPUS_BOUNDS = [[40.8848, 29.3681], [40.9012, 29.3897]];
+const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+const hasMaps = () => typeof L !== 'undefined';
+
+function makeMap(el, opts = {}) {
+  const map = L.map(el, {
+    center: CAMPUS_CENTER,
+    zoom: 16,
+    maxBounds: CAMPUS_BOUNDS,
+    maxBoundsViscosity: 0.8,
+    ...opts,
+  });
+  L.tileLayer(TILE_URL, { maxZoom: 19, attribution: TILE_ATTRIBUTION }).addTo(map);
+  return map;
+}
+
+function pinIcon(cls = '', size = 16) {
+  return L.divIcon({
+    className: `map-pin ${cls}`.trim(),
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  });
+}
+
+// One tap-to-place pin on a lazily initialised map. `dirty` tracks whether the
+// user changed the pin this session (vs. a value preloaded with load()).
+function createPinPicker(mapEl) {
+  let map = null;
+  let marker = null;
+  let pending = null; // pin loaded before the map exists
+  let dirty = false;
+
+  function place(lat, lng) {
+    if (!map) { pending = { lat, lng }; return; }
+    if (marker) {
+      marker.setLatLng([lat, lng]);
+    } else {
+      marker = L.marker([lat, lng], { icon: pinIcon(), draggable: true }).addTo(map);
+      marker.on('dragend', () => { dirty = true; });
+    }
+  }
+
+  return {
+    // Preset from stored data (or null to start empty); resets dirty state.
+    load(lat, lng) {
+      dirty = false;
+      pending = null;
+      if (marker) { marker.remove(); marker = null; }
+      if (lat != null && lng != null) place(lat, lng);
+    },
+    open() {
+      if (!hasMaps()) { toast('Map could not load. Check your connection.', true); return; }
+      if (!map) {
+        map = makeMap(mapEl);
+        map.on('click', (e) => {
+          place(e.latlng.lat, e.latlng.lng);
+          dirty = true;
+        });
+        if (pending) { place(pending.lat, pending.lng); pending = null; }
+      }
+      // Hidden containers render 0×0 — recompute once visible.
+      setTimeout(() => {
+        map.invalidateSize();
+        if (marker) map.panTo(marker.getLatLng());
+      }, 0);
+    },
+    getLatLng() {
+      if (marker) { const p = marker.getLatLng(); return { lat: p.lat, lng: p.lng }; }
+      return pending;
+    },
+    clear() {
+      if (marker) { marker.remove(); marker = null; }
+      pending = null;
+      dirty = true;
+    },
+    isDirty: () => dirty,
+    hasPin: () => !!(marker || pending),
+  };
+}
+
+let seenPin = null;
+let formPin = null;
+
+function wireMapToggle(toggleId, wrapId, picker) {
+  $(toggleId).addEventListener('click', () => {
+    const wrap = $(wrapId);
+    const show = wrap.classList.contains('hidden');
+    wrap.classList.toggle('hidden', !show);
+    if (show) picker.open();
+  });
+}
+
 // ---------- Sighting picker ----------
 
 let seenCat = null;
@@ -406,6 +504,8 @@ function openSeenPicker(cat) {
   $('seen-title').textContent = `Where did you see ${cat.name || 'this cat'}?`;
   $('seen-place').innerHTML = buildingOptions();
   $('seen-place').value = cat.last_seen_place || cat.building || 'Other';
+  seenPin.load(null, null);
+  $('seen-map-wrap').classList.add('hidden');
   $('seen-overlay').classList.remove('hidden');
   $('seen-sheet').classList.remove('hidden');
 }
@@ -419,6 +519,7 @@ function closeSeenPicker() {
 async function confirmSeen() {
   const cat = seenCat;
   if (!cat) return;
+  const pin = seenPin.getLatLng();
   const patch = {
     last_seen_at: new Date().toISOString(),
     last_seen_place: $('seen-place').value,
@@ -448,6 +549,7 @@ async function confirmSeen() {
       place: patch.last_seen_place,
       seen_at: patch.last_seen_at,
       reported_by: userName,
+      ...(pin ? { lat: pin.lat, lng: pin.lng } : {}),
     });
     if (sightingErr) throw sightingErr;
   } catch (err) {
@@ -480,10 +582,53 @@ function sightingsHtml(sightings) {
 
 async function renderSightings(catId) {
   $('m-sightings').innerHTML = '<p class="text-ink-3">Loading…</p>';
+  $('m-map').classList.add('hidden');
   const sightings = await loadSightings(catId);
   if (modalCat && modalCat.id === catId) {
     $('m-sightings').innerHTML = sightingsHtml(sightings);
+    renderModalMap(modalCat, sightings);
   }
+}
+
+// Read-only mini-map in the cat modal: home spot + recent pinned sightings.
+let modalMap = null;
+let modalMapLayer = null;
+
+function renderModalMap(cat, sightings) {
+  const el = $('m-map');
+  const points = [];
+  if (cat.lat != null && cat.lng != null) {
+    points.push({ lat: cat.lat, lng: cat.lng, home: true });
+  }
+  sightings
+    .filter((s) => s.lat != null && s.lng != null)
+    .slice(0, 10)
+    .forEach((s) => points.push({
+      lat: s.lat,
+      lng: s.lng,
+      label: `${s.place} · ${timeAgo(s.seen_at)}`,
+    }));
+
+  if (!points.length || !hasMaps()) return; // stays hidden
+
+  el.classList.remove('hidden');
+  if (!modalMap) {
+    modalMap = makeMap(el);
+    modalMapLayer = L.layerGroup().addTo(modalMap);
+  }
+  modalMapLayer.clearLayers();
+  points.forEach((p) => {
+    const marker = L.marker([p.lat, p.lng], {
+      icon: p.home ? pinIcon() : pinIcon('map-pin-sighting', 12),
+    }).addTo(modalMapLayer);
+    marker.bindTooltip(p.home ? 'Usual spot' : p.label);
+  });
+
+  setTimeout(() => {
+    modalMap.invalidateSize();
+    const bounds = L.latLngBounds(points.map((p) => [p.lat, p.lng]));
+    modalMap.fitBounds(bounds.pad(0.3), { maxZoom: 17 });
+  }, 0);
 }
 
 async function deleteCat(cat) {
@@ -700,6 +845,9 @@ function openForm(cat = null) {
   $('f-status').value = cat?.status || '';
   $('f-fixed').value = cat?.is_fixed === true ? 'true' : cat?.is_fixed === false ? 'false' : '';
   $('f-wanted').checked = !!cat?.is_wanted;
+  formPin.load(cat?.lat ?? null, cat?.lng ?? null);
+  $('f-map-wrap').classList.add('hidden');
+  $('f-map-toggle').textContent = formPin.hasPin() ? 'Show map · pin set' : 'Show map';
 
   // Keep old reporter names selectable even if no longer in PROFILES.
   const reporter = cat?.reported_by || userName;
@@ -755,6 +903,14 @@ async function submitForm(e) {
     is_wanted: $('f-wanted').checked,
     reported_by: $('f-reporter').value.trim() || userName,
   };
+
+  // Only touch lat/lng when the pin changed this edit, so saves keep working
+  // if the columns haven't been migrated in yet.
+  if (formPin.isDirty()) {
+    const pin = formPin.getLatLng();
+    record.lat = pin ? pin.lat : null;
+    record.lng = pin ? pin.lng : null;
+  }
 
   if (!record.building) {
     errEl.textContent = 'Please pick a location.';
@@ -826,6 +982,13 @@ function fillSelects() {
 
 function initApp() {
   fillSelects();
+
+  seenPin = createPinPicker($('seen-map'));
+  formPin = createPinPicker($('f-map'));
+  wireMapToggle('seen-map-toggle', 'seen-map-wrap', seenPin);
+  wireMapToggle('f-map-toggle', 'f-map-wrap', formPin);
+  $('seen-map-clear').addEventListener('click', () => seenPin.clear());
+  $('f-map-clear').addEventListener('click', () => formPin.clear());
 
   ['filter-building', 'filter-search', 'filter-wanted', 'filter-status', 'filter-fixed'].forEach((id) => {
     $(id).addEventListener('input', renderList);
