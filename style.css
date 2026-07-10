@@ -282,6 +282,24 @@ textarea.field {
   border-color: var(--clay);
 }
 
+.badge-vet {
+  color: var(--clay-2);
+  background: #F6ECE7;
+  border-color: #E3C9BE;
+}
+
+.badge-adopted {
+  color: var(--accent-2);
+  background: #EBF0F8;
+  border-color: #B9C7E2;
+}
+
+.badge-deceased {
+  color: var(--ink-2);
+  background: var(--paper);
+  border-color: var(--line-2);
+}
+
 .badge .dot {
   width: 0.375rem;
   height: 0.375rem;
@@ -339,6 +357,15 @@ textarea.field {
 
 .cat-card.is-wanted {
   border-color: #D5A48C;
+}
+
+.cat-card.is-adopted {
+  border-color: #B9C7E2;
+}
+
+.cat-card.is-deceased {
+  border-color: var(--line-2);
+  opacity: 0.82;
 }
 
 .cat-card .photo {

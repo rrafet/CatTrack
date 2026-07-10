@@ -18,7 +18,7 @@
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="tw-config.js?v=5"></script>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body class="bg-paper text-ink font-sans antialiased min-h-screen leading-relaxed">
 
@@ -109,6 +109,16 @@
               <span class="field-label">Search</span>
               <input id="filter-search" type="search" class="field" placeholder="Name, breed, description…">
             </label>
+            <label class="block">
+              <span class="field-label">Status</span>
+              <select id="filter-status" class="field">
+                <option value="">All statuses</option>
+                <option value="active">On campus</option>
+                <option value="vet">At the vet</option>
+                <option value="adopted">Adopted</option>
+                <option value="deceased">Deceased</option>
+              </select>
+            </label>
           </div>
           <div class="flex flex-wrap gap-x-6 gap-y-2 mt-3 pt-3 border-t border-line">
             <label class="check-label">
@@ -161,6 +171,16 @@
         <label class="block">
           <span class="field-label">Notes <em class="opt">optional</em></span>
           <textarea id="f-notes" class="field" rows="2" placeholder="Anything else — health, favourite food…"></textarea>
+        </label>
+
+        <label class="block">
+          <span class="field-label">Status</span>
+          <select id="f-status" class="field">
+            <option value="">On campus</option>
+            <option value="vet">At the vet / under treatment</option>
+            <option value="adopted">Adopted</option>
+            <option value="deceased">Deceased</option>
+          </select>
         </label>
 
         <div class="border border-line rounded p-3 bg-paper">
@@ -216,6 +236,7 @@
 
       <div class="flex flex-wrap items-center gap-2 mt-4">
         <span id="m-lastseen" class="badge-lastseen"></span>
+        <span id="m-status" class="badge hidden"></span>
         <span id="m-wanted" class="badge badge-wanted hidden">Wanted / missing</span>
       </div>
 
@@ -251,6 +272,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1/dist/umd/supabase.min.js"
           integrity="sha384-fx4y4cDx8NYfissnVzdGJY3yVXWY3rn5ab5HTUjpvgT35oDiyAbjjqnLhnRmESNE"
           crossorigin="anonymous"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

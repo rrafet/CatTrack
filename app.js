@@ -20,6 +20,13 @@ const BUILDING_GROUPS = [
   { label: 'Campus', items: ['FASS', 'FENS', 'FMAN', 'SBS', 'UC', 'IC', 'Piazza', 'Göl (Lake)', 'SGM', 'Pizzabulls', 'Post Office', 'Medline', 'SUSAM', 'Haberleşme', 'Korsan', 'Köpüklü', 'Other'] },
 ];
 
+// Life status — separate from `is_wanted` (which flags urgency, not life stage).
+const STATUS_META = {
+  vet: { label: 'At the vet', badgeClass: 'badge-vet' },
+  adopted: { label: 'Adopted', badgeClass: 'badge-adopted' },
+  deceased: { label: 'In loving memory', badgeClass: 'badge-deceased' },
+};
+
 const LS_UNLOCKED = 'cattrack:unlocked';
 const LS_NAME = 'cattrack:name';
 
@@ -188,6 +195,11 @@ function notesHtml(notes) {
 const lastSeenAt = (cat) => cat.last_seen_at || cat.created_at;
 const lastSeenPlace = (cat) => cat.last_seen_place || cat.building || 'campus';
 
+function statusBadgeHtml(cat) {
+  const meta = STATUS_META[cat.status];
+  return meta ? `<span class="badge ${meta.badgeClass}">${esc(meta.label)}</span>` : '';
+}
+
 function photoHtml(cat, cls) {
   if (cat.photo_url) {
     return `<img class="${cls}" src="${esc(cat.photo_url)}" alt="Photo of ${esc(cat.name || 'a cat')}" loading="lazy">`;
@@ -221,6 +233,7 @@ function miniCardHtml(cat, { showWantedBadge = true } = {}) {
           ${cat.last_seen_at
             ? `<span class="badge badge-seen">Seen ${esc(timeAgo(cat.last_seen_at))}</span>`
             : '<span class="badge badge-notseen">No sightings yet</span>'}
+          ${statusBadgeHtml(cat)}
           ${showWantedBadge && cat.is_wanted ? '<span class="badge badge-wanted">Wanted</span>' : ''}
         </div>
       </div>
@@ -260,6 +273,7 @@ function visibleCats() {
   const building = $('filter-building').value;
   const q = $('filter-search').value.trim().toLowerCase();
   const wantedOnly = $('filter-wanted').checked;
+  const statusFilter = $('filter-status').value;
 
   return cats.filter((c) => {
     if (building && c.building !== building) return false;
@@ -269,6 +283,8 @@ function visibleCats() {
       if (!haystack.includes(q)) return false;
     }
     if (wantedOnly && !c.is_wanted) return false;
+    if (statusFilter === 'active' && c.status) return false;
+    if (statusFilter && statusFilter !== 'active' && c.status !== statusFilter) return false;
     return true;
   });
 }
@@ -290,7 +306,7 @@ function renderList() {
   list.innerHTML = items.map((cat) => {
     const tracked = trackedIds.has(cat.id);
     return `
-    <article class="cat-card ${cat.is_wanted ? 'is-wanted' : ''}" data-id="${esc(cat.id)}">
+    <article class="cat-card ${cat.is_wanted ? 'is-wanted' : ''} ${cat.status === 'adopted' ? 'is-adopted' : ''} ${cat.status === 'deceased' ? 'is-deceased' : ''}" data-id="${esc(cat.id)}">
       ${photoHtml(cat, 'photo')}
       <div class="p-4 flex flex-col gap-2 grow">
         <div class="flex items-start justify-between gap-2">
@@ -306,6 +322,7 @@ function renderList() {
           ${cat.last_seen_at
             ? `<span class="badge badge-seen">Seen in ${esc(lastSeenPlace(cat))} · ${esc(timeAgo(cat.last_seen_at))}</span>`
             : '<span class="badge badge-notseen">No sightings yet</span>'}
+          ${statusBadgeHtml(cat)}
           ${cat.is_wanted ? '<span class="badge badge-wanted">Wanted / missing</span>' : ''}
         </div>
 
@@ -478,6 +495,10 @@ function openCatModal(cat) {
   if (photos.length) $('m-photo').src = photos[0];
 
   setModalSeenBadge(cat);
+  const statusMeta = STATUS_META[cat.status];
+  $('m-status').className = `badge ${statusMeta ? statusMeta.badgeClass : ''}`.trim();
+  $('m-status').textContent = statusMeta ? statusMeta.label : '';
+  $('m-status').classList.toggle('hidden', !statusMeta);
   $('m-wanted').classList.toggle('hidden', !cat.is_wanted);
 
   $('m-meta').textContent = [cat.building, cat.breed].filter(Boolean).join(' · ');
@@ -519,6 +540,7 @@ function openForm(cat = null) {
   $('f-breed').value = cat?.breed || '';
   $('f-description').value = cat?.description || '';
   $('f-notes').value = cat?.notes || '';
+  $('f-status').value = cat?.status || '';
   $('f-wanted').checked = !!cat?.is_wanted;
 
   // Keep old reporter names selectable even if no longer in PROFILES.
@@ -570,6 +592,7 @@ async function submitForm(e) {
     breed: $('f-breed').value.trim() || null,
     description: $('f-description').value.trim() || null,
     notes: $('f-notes').value.trim() || null,
+    status: $('f-status').value || null,
     is_wanted: $('f-wanted').checked,
     reported_by: $('f-reporter').value.trim() || userName,
   };
@@ -645,7 +668,7 @@ function fillSelects() {
 function initApp() {
   fillSelects();
 
-  ['filter-building', 'filter-search', 'filter-wanted'].forEach((id) => {
+  ['filter-building', 'filter-search', 'filter-wanted', 'filter-status'].forEach((id) => {
     $(id).addEventListener('input', renderList);
   });
 
