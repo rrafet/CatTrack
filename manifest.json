@@ -1,0 +1,24 @@
+{
+  "name": "CatTrack",
+  "short_name": "CatTrack",
+  "description": "A shared log of the cats around Sabancı University campus.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FAF8F4",
+  "theme_color": "#FAF8F4",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

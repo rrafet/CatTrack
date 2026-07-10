@@ -1,0 +1,502 @@
+/* CatTrack — custom styles on top of Tailwind.
+   Palette: paper #FAF8F4 · ink #2B2926 · line #E7E2D8 · clay #B0583A · sage #6F7D62 */
+
+:root {
+  --paper: #FAF8F4;
+  --ink: #2B2926;
+  --ink-2: #6E6A61;
+  --ink-3: #9B968B;
+  --line: #E7E2D8;
+  --line-2: #D9D3C7;
+  --accent: #184691;
+  --accent-2: #12317A;
+  --clay: #B0583A;
+  --clay-2: #8F4631;
+  --sage: #6F7D62;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Respect notches / home indicator when installed as a PWA */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+header {
+  padding-top: env(safe-area-inset-top);
+}
+
+main,
+.form-sheet {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+::selection {
+  background: #D9E2F2;
+}
+
+/* ---------- Typography helpers ---------- */
+
+.section-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.field-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-bottom: 0.375rem;
+}
+
+.field-label .opt {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+/* ---------- Form fields ---------- */
+
+.field {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 0.625rem 0.75rem;
+  font-size: 1rem;
+  color: var(--ink);
+  line-height: 1.4;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.field::placeholder {
+  color: var(--ink-3);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--ink-2);
+}
+
+select.field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236E6A61' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
+}
+
+textarea.field {
+  resize: vertical;
+  min-height: 2.75rem;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 4px;
+  padding: 0.625rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+}
+
+.btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn-primary:disabled { opacity: 0.55; cursor: default; }
+
+.btn-secondary {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+}
+
+.btn-secondary:hover { border-color: var(--ink-3); }
+
+/* Small text-like action used on cards */
+.card-action {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, background-color 120ms ease;
+}
+
+.card-action:hover { border-color: var(--ink-3); color: var(--ink); }
+
+/* Larger tap targets on touch screens */
+@media (pointer: coarse) {
+  .card-action {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
+.card-action.is-active {
+  color: var(--accent-2);
+  border-color: #B9C7E2;
+  background: #EBF0F8;
+}
+
+.card-action.danger:hover {
+  color: var(--clay-2);
+  border-color: #DCC0B2;
+}
+
+/* "Seen" card action */
+.card-action.act-seen {
+  color: #3F4C37;
+  background: #EFF1EA;
+  border-color: #C2CCB4;
+  font-weight: 600;
+}
+
+.card-action.act-seen:hover {
+  border-color: var(--sage);
+}
+
+/* ---------- Checkboxes ---------- */
+
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  flex: none;
+  display: inline-grid;
+  place-content: center;
+}
+
+.check:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.check:checked::before {
+  content: "";
+  width: 0.625rem;
+  height: 0.625rem;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 5.5l2.5 2.5L8.5 2.5' fill='none' stroke='%23fff' stroke-width='1.8'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.check:focus-visible {
+  outline: 2px solid var(--ink-3);
+  outline-offset: 2px;
+}
+
+/* ---------- Profile picker ---------- */
+
+.profile-chip {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  padding: 0.875rem 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.profile-chip:hover {
+  border-color: var(--ink-3);
+}
+
+.profile-chip.is-active {
+  border-color: var(--accent);
+  color: var(--accent-2);
+  background: #EBF0F8;
+}
+
+/* ---------- Badges ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.badge-seen {
+  color: #4C5943;
+  background: #EFF1EA;
+  border-color: #DCE1D3;
+}
+
+.badge-notseen {
+  color: var(--ink-3);
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.badge-wanted {
+  color: #fff;
+  background: var(--clay);
+  border-color: var(--clay);
+}
+
+.badge .dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.note-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- Tracked row ---------- */
+
+.tracked-row {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.tracked-card {
+  flex: none;
+  width: 9.5rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.tracked-card img,
+.tracked-card .photo-fallback {
+  width: 100%;
+  height: 5.5rem;
+  object-fit: cover;
+  display: block;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- Cat cards ---------- */
+
+.cat-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cat-card.is-wanted {
+  border-color: #D5A48C;
+}
+
+.cat-card .photo {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  display: block;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+
+/* Fallback strip for cats without a photo */
+.cat-card .photo-fallback {
+  width: 100%;
+  height: 4.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.photo-fallback {
+  display: grid;
+  place-content: center;
+  color: var(--line-2);
+  font-size: 2rem;
+  background: var(--paper);
+}
+
+/* ---------- Cat profile modal ---------- */
+
+.modal-photo {
+  width: 100%;
+  max-height: 48vh;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: block;
+}
+
+.modal-thumbs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.modal-thumb {
+  width: 3.5rem;
+  height: 3.5rem;
+  object-fit: cover;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  cursor: pointer;
+  flex: none;
+}
+
+.modal-thumb.is-active {
+  border-color: var(--accent);
+}
+
+/* Last-seen badge */
+.badge-lastseen {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #4C5943;
+  background: #EFF1EA;
+  border: 1px solid #DCE1D3;
+  border-radius: 4px;
+  padding: 0.45rem 0.75rem;
+}
+
+.badge-lastseen small {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: #77836B;
+}
+
+/* Modal badge when the cat has no logged sightings */
+.badge-lastseen.is-empty {
+  color: var(--ink-2);
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+.badge-lastseen.is-empty small {
+  color: var(--ink-3);
+}
+
+/* Cards are tappable (open the profile modal) */
+.cat-card,
+.tracked-card {
+  cursor: pointer;
+  transition: border-color 120ms ease;
+}
+
+.cat-card:hover,
+.tracked-card:hover {
+  border-color: #C9C2B2;
+}
+
+/* ---------- Form sheet (add / edit) ---------- */
+
+.form-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  overflow-y: auto;
+  background: var(--paper);
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 640px) {
+  .form-sheet {
+    inset: auto 0 auto 0;
+    top: 3rem;
+    max-height: calc(100vh - 6rem);
+    max-width: 34rem;
+    margin: 0 auto;
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    background: var(--paper);
+  }
+}
+
+/* ---------- Sighting picker ---------- */
+
+.seen-sheet {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 49;
+  width: min(calc(100vw - 2rem), 22rem);
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  padding: 1.25rem 1rem;
+}
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 60;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.875rem;
+  padding: 0.625rem 1rem;
+  border-radius: 4px;
+  max-width: calc(100vw - 2rem);
+  text-align: center;
+}
+
+.toast.error {
+  background: var(--clay-2);
+}

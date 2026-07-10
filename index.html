@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://ckgeknxtjdwjsqqbmybg.supabase.co; connect-src 'self' https://ckgeknxtjdwjsqqbmybg.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none'">
+  <title>CatTrack</title>
+  <meta name="description" content="A shared log of the cats around Sabancı University campus.">
+  <meta name="theme-color" content="#FAF8F4">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.ico?v=1" sizes="any">
+  <link rel="icon" href="icons/icon-192.png?v=4" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=4">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="CatTrack">
+
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="tw-config.js?v=5"></script>
+  <link rel="stylesheet" href="style.css?v=5">
+</head>
+<body class="bg-paper text-ink font-sans antialiased min-h-screen leading-relaxed">
+
+  <!-- ============ Password gate ============ -->
+  <div id="gate" class="fixed inset-0 z-50 bg-paper flex items-center justify-center px-6 hidden">
+    <div class="w-full max-w-sm">
+      <img src="assets/CatTrack-icon-1a.png" alt="" class="w-14 h-14 mb-5">
+      <p class="text-navy text-sm tracking-[0.2em] uppercase mb-2">Sabancı campus cats</p>
+      <h1 class="text-3xl font-semibold tracking-tight mb-1">CatTrack</h1>
+      <p class="text-ink-2 mb-8">A shared log of the cats around Sabancı University campus. Enter the group password to continue.</p>
+      <form id="gate-form" class="space-y-3">
+        <label class="block">
+          <span class="field-label">Password</span>
+          <input id="gate-password" type="password" autocomplete="current-password"
+                 class="field" placeholder="Group password" required>
+        </label>
+        <p id="gate-error" class="text-clay text-sm hidden">That password isn't right — ask the group.</p>
+        <button type="submit" class="btn-primary w-full">Enter</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ Profile picker ============ -->
+  <div id="name-gate" class="fixed inset-0 z-50 bg-paper overflow-y-auto hidden">
+    <div class="min-h-full flex items-center justify-center px-6 py-10">
+      <div class="w-full max-w-sm">
+        <h1 class="text-2xl font-semibold tracking-tight mb-1">Who are you?</h1>
+        <p class="text-ink-2 mb-8">Pick your profile — it's shown next to the cats you report and track. You can switch anytime from the top corner.</p>
+        <div id="profile-list" class="grid grid-cols-2 gap-2"></div>
+        <button type="button" id="profile-cancel" class="mt-6 text-sm text-ink-2 hover:text-ink underline underline-offset-4 hidden">
+          Cancel — stay as <span id="profile-cancel-name"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ App ============ -->
+  <div id="app" class="hidden">
+
+    <header class="border-b border-line bg-paper sticky top-0 z-30">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <img src="assets/CatTrack-icon-1a.png" alt="" class="w-7 h-7">
+          <span class="font-semibold tracking-tight text-lg">CatTrack</span>
+          <span class="hidden sm:inline text-ink-3 text-sm">Sabancı campus cats</span>
+        </div>
+        <button id="profile-btn" class="text-sm text-ink-2 hover:text-ink border border-line rounded px-3 py-1.5 bg-card"
+                title="Change your name">
+          <span id="profile-name"></span>
+        </button>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 pb-24">
+
+      <!-- Wanted / missing cats (shared across everyone) -->
+      <section id="wanted-section" class="pt-8 hidden">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="section-title">Wanted / Missing / Important</h2>
+          <span id="wanted-count" class="text-sm text-ink-3"></span>
+        </div>
+        <div id="wanted-row" class="tracked-row"></div>
+      </section>
+
+      <!-- My tracked cats -->
+      <section class="pt-8">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="section-title">My tracked cats</h2>
+          <span id="tracked-count" class="text-sm text-ink-3"></span>
+        </div>
+        <div id="tracked-row" class="tracked-row"></div>
+      </section>
+
+      <!-- All cats: filters (sticky) + list -->
+      <section class="pt-10">
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="section-title">All cats</h2>
+          <button id="add-btn" class="btn-primary">+ Add a cat</button>
+        </div>
+
+        <div class="sticky top-14 z-20 border border-line bg-card rounded p-3 sm:p-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="block">
+              <span class="field-label">Location</span>
+              <select id="filter-building" class="field"></select>
+            </label>
+            <label class="block">
+              <span class="field-label">Search</span>
+              <input id="filter-search" type="search" class="field" placeholder="Name, breed, description…">
+            </label>
+          </div>
+          <div class="flex flex-wrap gap-x-6 gap-y-2 mt-3 pt-3 border-t border-line">
+            <label class="check-label">
+              <input id="filter-wanted" type="checkbox" class="check">
+              <span>Only wanted / missing</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="list-status" class="text-ink-3 text-sm py-8 text-center hidden"></div>
+        <div id="cat-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6"></div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ============ Add / edit form ============ -->
+  <div id="form-overlay" class="fixed inset-0 z-40 bg-ink/20 hidden" data-close></div>
+  <div id="form-sheet" class="form-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="form-title">
+    <div class="max-w-lg mx-auto px-4 sm:px-6 py-6">
+      <div class="flex items-center justify-between mb-6">
+        <h2 id="form-title" class="text-xl font-semibold tracking-tight">Add a cat</h2>
+        <button type="button" class="text-ink-2 hover:text-ink text-sm border border-line rounded px-3 py-1.5 bg-card" data-close>Close</button>
+      </div>
+
+      <form id="cat-form" class="space-y-5">
+        <input type="hidden" id="f-id">
+
+        <label class="block">
+          <span class="field-label">Name <em class="opt">optional</em></span>
+          <input id="f-name" type="text" class="field" placeholder="e.g. Biscuit" maxlength="60">
+        </label>
+
+        <label class="block">
+          <span class="field-label">Location</span>
+          <select id="f-building" class="field" required></select>
+        </label>
+
+        <label class="block">
+          <span class="field-label">Breed <em class="opt">optional</em></span>
+          <input id="f-breed" type="text" class="field" placeholder="e.g. Tabby, Van, unknown" maxlength="60">
+        </label>
+
+        <label class="block">
+          <span class="field-label">Description</span>
+          <textarea id="f-description" class="field" rows="2" placeholder="Looks, personality, where it usually sits…"></textarea>
+        </label>
+
+        <label class="block">
+          <span class="field-label">Notes <em class="opt">optional</em></span>
+          <textarea id="f-notes" class="field" rows="2" placeholder="Anything else — health, favourite food…"></textarea>
+        </label>
+
+        <div class="border border-line rounded p-3 bg-paper">
+          <label class="check-label justify-between w-full">
+            <span>
+              <span class="font-medium">Wanted / missing / important</span>
+              <span class="block text-sm text-ink-3">Flags this cat and pins it to the section at the top for everyone.</span>
+            </span>
+            <input id="f-wanted" type="checkbox" class="check">
+          </label>
+        </div>
+
+        <div class="block">
+          <span class="field-label">Photo <em class="opt">optional</em></span>
+          <div class="flex items-center gap-3">
+            <label class="btn-secondary cursor-pointer">
+              <input id="f-photo" type="file" accept="image/*" capture="environment" class="sr-only">
+              Take or choose photo
+            </label>
+            <span id="f-photo-name" class="text-sm text-ink-3 truncate"></span>
+          </div>
+          <div id="f-photo-preview-wrap" class="mt-3 hidden">
+            <img id="f-photo-preview" alt="Photo preview" class="h-28 w-28 object-cover rounded border border-line">
+          </div>
+        </div>
+
+        <label class="block">
+          <span class="field-label">Reported by</span>
+          <select id="f-reporter" class="field" required></select>
+        </label>
+
+        <p id="form-error" class="text-clay text-sm hidden"></p>
+
+        <div class="flex gap-3 pt-1">
+          <button type="submit" id="form-submit" class="btn-primary flex-1">Save cat</button>
+          <button type="button" class="btn-secondary" data-close>Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ Cat profile modal ============ -->
+  <div id="modal-overlay" class="fixed inset-0 z-40 bg-ink/20 hidden" data-modal-close></div>
+  <div id="cat-modal" class="form-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="m-name">
+    <div class="max-w-lg mx-auto px-4 sm:px-6 py-6">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 id="m-name" class="text-xl font-semibold tracking-tight truncate"></h2>
+        <button type="button" class="shrink-0 text-ink-2 hover:text-ink text-sm border border-line rounded px-3 py-1.5 bg-card" data-modal-close>Close</button>
+      </div>
+
+      <img id="m-photo" class="modal-photo hidden" alt="Cat photo">
+      <div id="m-thumbs" class="modal-thumbs"></div>
+
+      <div class="flex flex-wrap items-center gap-2 mt-4">
+        <span id="m-lastseen" class="badge-lastseen"></span>
+        <span id="m-wanted" class="badge badge-wanted hidden">Wanted / missing</span>
+      </div>
+
+      <p id="m-meta" class="text-sm text-ink-2 mt-3"></p>
+      <p id="m-desc" class="mt-3 hidden"></p>
+      <p id="m-notes" class="text-sm text-ink-3 mt-2 hidden"></p>
+
+      <p id="m-reporter" class="text-xs text-ink-3 mt-4 pt-3 border-t border-line"></p>
+
+      <div class="flex gap-1.5 mt-3">
+        <button id="m-seen" class="card-action act-seen">I saw it</button>
+        <button id="m-track" class="card-action"></button>
+        <button id="m-edit" class="card-action">Edit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Sighting picker ============ -->
+  <div id="seen-overlay" class="fixed inset-0 bg-ink/20 hidden" style="z-index:48" data-seen-cancel></div>
+  <div id="seen-sheet" class="seen-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="seen-title">
+    <h3 id="seen-title" class="font-semibold tracking-tight mb-1">Where did you see this cat?</h3>
+    <p class="text-sm text-ink-3 mb-3">Logged as a sighting — the cat's usual location stays the same.</p>
+    <select id="seen-place" class="field mb-3"></select>
+    <div class="flex gap-2">
+      <button id="seen-confirm" class="btn-primary flex-1">Seen here, now</button>
+      <button class="btn-secondary" data-seen-cancel>Cancel</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1/dist/umd/supabase.min.js"
+          integrity="sha384-fx4y4cDx8NYfissnVzdGJY3yVXWY3rn5ab5HTUjpvgT35oDiyAbjjqnLhnRmESNE"
+          crossorigin="anonymous"></script>
+  <script src="app.js?v=8"></script>
+</body>
+</html>
