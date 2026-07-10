@@ -300,6 +300,18 @@ textarea.field {
   border-color: var(--line-2);
 }
 
+.badge-fixed {
+  color: #4C5943;
+  background: #EFF1EA;
+  border-color: #DCE1D3;
+}
+
+.badge-notfixed {
+  color: var(--clay-2);
+  background: #F6ECE7;
+  border-color: #E3C9BE;
+}
+
 .badge .dot {
   width: 0.375rem;
   height: 0.375rem;

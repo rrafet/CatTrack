@@ -27,6 +27,12 @@ const STATUS_META = {
   deceased: { label: 'In loving memory', badgeClass: 'badge-deceased' },
 };
 
+// Spay/neuter status — tri-state; `is_fixed` is null/undefined when unknown.
+const FIXED_META = {
+  true: { label: 'Fixed', badgeClass: 'badge-fixed' },
+  false: { label: 'Not fixed', badgeClass: 'badge-notfixed' },
+};
+
 const LS_UNLOCKED = 'cattrack:unlocked';
 const LS_NAME = 'cattrack:name';
 
@@ -200,6 +206,12 @@ function statusBadgeHtml(cat) {
   return meta ? `<span class="badge ${meta.badgeClass}">${esc(meta.label)}</span>` : '';
 }
 
+function fixedBadgeHtml(cat) {
+  if (cat.is_fixed === null || cat.is_fixed === undefined) return '';
+  const meta = FIXED_META[cat.is_fixed];
+  return meta ? `<span class="badge ${meta.badgeClass}">${esc(meta.label)}</span>` : '';
+}
+
 function photoHtml(cat, cls) {
   if (cat.photo_url) {
     return `<img class="${cls}" src="${esc(cat.photo_url)}" alt="Photo of ${esc(cat.name || 'a cat')}" loading="lazy">`;
@@ -274,6 +286,7 @@ function visibleCats() {
   const q = $('filter-search').value.trim().toLowerCase();
   const wantedOnly = $('filter-wanted').checked;
   const statusFilter = $('filter-status').value;
+  const fixedFilter = $('filter-fixed').value;
 
   return cats.filter((c) => {
     if (building && c.building !== building) return false;
@@ -285,6 +298,9 @@ function visibleCats() {
     if (wantedOnly && !c.is_wanted) return false;
     if (statusFilter === 'active' && c.status) return false;
     if (statusFilter && statusFilter !== 'active' && c.status !== statusFilter) return false;
+    if (fixedFilter === 'unknown' && (c.is_fixed !== null && c.is_fixed !== undefined)) return false;
+    if (fixedFilter === 'true' && c.is_fixed !== true) return false;
+    if (fixedFilter === 'false' && c.is_fixed !== false) return false;
     return true;
   });
 }
@@ -323,6 +339,7 @@ function renderList() {
             ? `<span class="badge badge-seen">Seen in ${esc(lastSeenPlace(cat))} · ${esc(timeAgo(cat.last_seen_at))}</span>`
             : '<span class="badge badge-notseen">No sightings yet</span>'}
           ${statusBadgeHtml(cat)}
+          ${fixedBadgeHtml(cat)}
           ${cat.is_wanted ? '<span class="badge badge-wanted">Wanted / missing</span>' : ''}
         </div>
 
@@ -412,11 +429,60 @@ async function confirmSeen() {
     Object.assign(cat, patch);
     closeSeenPicker();
     render();
-    if (modalCat === cat) setModalSeenBadge(cat);
+    if (modalCat === cat) {
+      setModalSeenBadge(cat);
+      renderSightings(cat.id);
+    }
     toast(`${cat.name || 'Cat'} seen in ${patch.last_seen_place}.`);
   } catch (err) {
     console.error(err);
     toast('Could not save the sighting. Try again.', true);
+    return;
+  }
+
+  // Best-effort history entry — doesn't block the core "seen" flow above,
+  // so it fails soft if the `sightings` table hasn't been migrated in yet.
+  try {
+    const { error: sightingErr } = await db.from('sightings').insert({
+      cat_id: cat.id,
+      place: patch.last_seen_place,
+      seen_at: patch.last_seen_at,
+      reported_by: userName,
+    });
+    if (sightingErr) throw sightingErr;
+  } catch (err) {
+    console.error('Could not record sighting history:', err);
+  }
+}
+
+// ---------- Sighting history ----------
+
+async function loadSightings(catId) {
+  const { data, error } = await db
+    .from('sightings')
+    .select('*')
+    .eq('cat_id', catId)
+    .order('seen_at', { ascending: false });
+  if (error) {
+    console.error('Could not load sighting history:', error);
+    return [];
+  }
+  return data || [];
+}
+
+function sightingsHtml(sightings) {
+  if (!sightings.length) return '<p class="text-ink-3">No sightings logged yet.</p>';
+  return sightings.map((s) => `
+    <p>${esc(s.place)}
+      <span class="text-ink-3">· ${esc(timeAgo(s.seen_at))}${s.reported_by ? ` · reported by ${esc(s.reported_by)}` : ''}</span>
+    </p>`).join('');
+}
+
+async function renderSightings(catId) {
+  $('m-sightings').innerHTML = '<p class="text-ink-3">Loading…</p>';
+  const sightings = await loadSightings(catId);
+  if (modalCat && modalCat.id === catId) {
+    $('m-sightings').innerHTML = sightingsHtml(sightings);
   }
 }
 
@@ -499,6 +565,10 @@ function openCatModal(cat) {
   $('m-status').className = `badge ${statusMeta ? statusMeta.badgeClass : ''}`.trim();
   $('m-status').textContent = statusMeta ? statusMeta.label : '';
   $('m-status').classList.toggle('hidden', !statusMeta);
+  const fixedMeta = FIXED_META[cat.is_fixed];
+  $('m-fixed').className = `badge ${fixedMeta ? fixedMeta.badgeClass : ''}`.trim();
+  $('m-fixed').textContent = fixedMeta ? fixedMeta.label : '';
+  $('m-fixed').classList.toggle('hidden', !fixedMeta);
   $('m-wanted').classList.toggle('hidden', !cat.is_wanted);
 
   $('m-meta').textContent = [cat.building, cat.breed].filter(Boolean).join(' · ');
@@ -511,6 +581,9 @@ function openCatModal(cat) {
   $('m-reporter').textContent = `Reported by ${cat.reported_by || 'someone'}`;
   updateModalTrackBtn();
 
+  renderSightings(cat.id);
+  renderComments(cat.id);
+
   $('modal-overlay').classList.remove('hidden');
   $('cat-modal').classList.remove('hidden');
   $('cat-modal').scrollTop = 0;
@@ -522,6 +595,90 @@ function closeCatModal() {
   $('cat-modal').classList.add('hidden');
   document.body.style.overflow = '';
   modalCat = null;
+}
+
+// ---------- Comments (one level of replies) ----------
+
+async function loadComments(catId) {
+  const { data, error } = await db
+    .from('comments')
+    .select('*')
+    .eq('cat_id', catId)
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.error('Could not load comments:', error);
+    return [];
+  }
+  return data || [];
+}
+
+function replyHtml(reply) {
+  return `
+    <div data-id="${esc(reply.id)}">
+      <p class="text-sm"><span class="font-medium">${esc(reply.author || 'someone')}</span> <span class="text-ink-3 text-xs">${esc(timeAgo(reply.created_at))}</span></p>
+      <p class="text-sm text-ink-2">${esc(reply.body)}</p>
+      ${reply.author === userName
+        ? `<button type="button" class="text-xs text-ink-3 hover:text-clay-2 underline underline-offset-2" data-comment-delete="${esc(reply.id)}">Delete</button>`
+        : ''}
+    </div>`;
+}
+
+function commentHtml(comment) {
+  return `
+    <div data-id="${esc(comment.id)}">
+      <p class="text-sm"><span class="font-medium">${esc(comment.author || 'someone')}</span> <span class="text-ink-3 text-xs">${esc(timeAgo(comment.created_at))}</span></p>
+      <p class="text-sm text-ink-2">${esc(comment.body)}</p>
+      <div class="flex gap-3 mt-1">
+        <button type="button" class="text-xs text-ink-3 hover:text-ink underline underline-offset-2" data-reply-toggle="${esc(comment.id)}">Reply</button>
+        ${comment.author === userName
+          ? `<button type="button" class="text-xs text-ink-3 hover:text-clay-2 underline underline-offset-2" data-comment-delete="${esc(comment.id)}">Delete</button>`
+          : ''}
+      </div>
+      <form class="hidden mt-2 flex gap-2" data-reply-form="${esc(comment.id)}">
+        <input type="text" class="field" placeholder="Write a reply…" maxlength="500" required>
+        <button type="submit" class="btn-secondary shrink-0">Reply</button>
+      </form>
+      ${comment.replies.length
+        ? `<div class="mt-2 pl-4 border-l border-line space-y-2">${comment.replies.map(replyHtml).join('')}</div>`
+        : ''}
+    </div>`;
+}
+
+function commentsHtml(comments) {
+  const topLevel = comments.filter((c) => !c.parent_id).map((c) => ({
+    ...c,
+    replies: comments.filter((r) => r.parent_id === c.id),
+  }));
+  if (!topLevel.length) return '<p class="text-ink-3 text-sm">No comments yet.</p>';
+  return `<div class="space-y-3">${topLevel.map(commentHtml).join('')}</div>`;
+}
+
+async function renderComments(catId) {
+  $('m-comments').innerHTML = '<p class="text-ink-3 text-sm">Loading…</p>';
+  const comments = await loadComments(catId);
+  if (modalCat && modalCat.id === catId) {
+    $('m-comments').innerHTML = commentsHtml(comments);
+  }
+}
+
+async function postComment(catId, body, parentId = null) {
+  const { error } = await db.from('comments').insert({
+    cat_id: catId, parent_id: parentId, author: userName, body,
+  });
+  if (error) {
+    console.error(error);
+    toast('Could not post comment. Try again.', true);
+    return false;
+  }
+  return true;
+}
+
+async function deleteComment(id) {
+  const { error } = await db.from('comments').delete().eq('id', id);
+  if (error) {
+    console.error(error);
+    toast('Could not delete comment.', true);
+  }
 }
 
 // ---------- Add / edit form ----------
@@ -541,6 +698,7 @@ function openForm(cat = null) {
   $('f-description').value = cat?.description || '';
   $('f-notes').value = cat?.notes || '';
   $('f-status').value = cat?.status || '';
+  $('f-fixed').value = cat?.is_fixed === true ? 'true' : cat?.is_fixed === false ? 'false' : '';
   $('f-wanted').checked = !!cat?.is_wanted;
 
   // Keep old reporter names selectable even if no longer in PROFILES.
@@ -593,6 +751,7 @@ async function submitForm(e) {
     description: $('f-description').value.trim() || null,
     notes: $('f-notes').value.trim() || null,
     status: $('f-status').value || null,
+    is_fixed: $('f-fixed').value === '' ? null : $('f-fixed').value === 'true',
     is_wanted: $('f-wanted').checked,
     reported_by: $('f-reporter').value.trim() || userName,
   };
@@ -668,7 +827,7 @@ function fillSelects() {
 function initApp() {
   fillSelects();
 
-  ['filter-building', 'filter-search', 'filter-wanted', 'filter-status'].forEach((id) => {
+  ['filter-building', 'filter-search', 'filter-wanted', 'filter-status', 'filter-fixed'].forEach((id) => {
     $(id).addEventListener('input', renderList);
   });
 
@@ -709,6 +868,47 @@ function initApp() {
     const cat = modalCat;
     closeCatModal();
     if (cat) openForm(cat);
+  });
+
+  $('comment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!modalCat) return;
+    const input = $('comment-body');
+    const body = input.value.trim();
+    if (!body) return;
+    const catId = modalCat.id;
+    if (await postComment(catId, body)) {
+      input.value = '';
+      renderComments(catId);
+    }
+  });
+
+  $('m-comments').addEventListener('click', (e) => {
+    const replyBtn = e.target.closest('[data-reply-toggle]');
+    if (replyBtn) {
+      const form = $('m-comments').querySelector(`[data-reply-form="${replyBtn.dataset.replyToggle}"]`);
+      if (form) form.classList.toggle('hidden');
+      return;
+    }
+    const delBtn = e.target.closest('[data-comment-delete]');
+    if (delBtn && modalCat) {
+      if (!confirm('Delete this comment?')) return;
+      const catId = modalCat.id;
+      deleteComment(delBtn.dataset.commentDelete).then(() => renderComments(catId));
+    }
+  });
+
+  $('m-comments').addEventListener('submit', async (e) => {
+    const form = e.target.closest('[data-reply-form]');
+    if (!form || !modalCat) return;
+    e.preventDefault();
+    const input = form.querySelector('input');
+    const body = input.value.trim();
+    if (!body) return;
+    const catId = modalCat.id;
+    if (await postComment(catId, body, form.dataset.replyForm)) {
+      renderComments(catId);
+    }
   });
 
   // Tapping a wanted or tracked card opens the profile modal

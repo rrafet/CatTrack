@@ -18,7 +18,7 @@
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="tw-config.js?v=5"></script>
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body class="bg-paper text-ink font-sans antialiased min-h-screen leading-relaxed">
 
@@ -119,6 +119,15 @@
                 <option value="deceased">Deceased</option>
               </select>
             </label>
+            <label class="block">
+              <span class="field-label">Fixed</span>
+              <select id="filter-fixed" class="field">
+                <option value="">All cats</option>
+                <option value="true">Fixed</option>
+                <option value="false">Not fixed</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </label>
           </div>
           <div class="flex flex-wrap gap-x-6 gap-y-2 mt-3 pt-3 border-t border-line">
             <label class="check-label">
@@ -183,6 +192,15 @@
           </select>
         </label>
 
+        <label class="block">
+          <span class="field-label">Spay / neuter status</span>
+          <select id="f-fixed" class="field">
+            <option value="">Unknown</option>
+            <option value="true">Fixed</option>
+            <option value="false">Not fixed</option>
+          </select>
+        </label>
+
         <div class="border border-line rounded p-3 bg-paper">
           <label class="check-label justify-between w-full">
             <span>
@@ -237,6 +255,7 @@
       <div class="flex flex-wrap items-center gap-2 mt-4">
         <span id="m-lastseen" class="badge-lastseen"></span>
         <span id="m-status" class="badge hidden"></span>
+        <span id="m-fixed" class="badge hidden"></span>
         <span id="m-wanted" class="badge badge-wanted hidden">Wanted / missing</span>
       </div>
 
@@ -250,6 +269,20 @@
         <button id="m-seen" class="card-action act-seen">I saw it</button>
         <button id="m-track" class="card-action"></button>
         <button id="m-edit" class="card-action">Edit</button>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-line">
+        <h3 class="section-title mb-2">Sighting history</h3>
+        <div id="m-sightings" class="space-y-1 text-sm text-ink-2"></div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-line">
+        <h3 class="section-title mb-2">Comments</h3>
+        <div id="m-comments" class="space-y-3"></div>
+        <form id="comment-form" class="flex gap-2 mt-3">
+          <input id="comment-body" type="text" class="field" placeholder="Add a comment…" maxlength="500" required>
+          <button type="submit" class="btn-secondary shrink-0">Post</button>
+        </form>
       </div>
     </div>
   </div>
@@ -272,6 +305,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.1/dist/umd/supabase.min.js"
           integrity="sha384-fx4y4cDx8NYfissnVzdGJY3yVXWY3rn5ab5HTUjpvgT35oDiyAbjjqnLhnRmESNE"
           crossorigin="anonymous"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
